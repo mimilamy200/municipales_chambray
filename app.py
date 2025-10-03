@@ -18,7 +18,7 @@ st.title("Chambray-lès-Tours (37050) – Observatoire & Ciblage")
 logo = ASSETS / "logo.png"
 cols = st.columns([1, 3])
 if logo.exists():
-    cols[0].image(str(logo), use_column_width=True)
+    cols[0].image(str(logo), use_container_width=True)
 cols[1].caption("Données agrégées (IRIS/BV). Exports CSV/PDF. Carte SPT incluse.")
 
 # --- Helper de chargement
