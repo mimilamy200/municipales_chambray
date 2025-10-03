@@ -107,73 +107,68 @@ with colB:
             from reportlab.pdfgen import canvas
             from reportlab.lib.units import cm
             from reportlab.lib.utils import ImageReader
+
+            # Petit helper qui dessine une ligne et renvoie le nouveau y
+            def line(canvas_obj, y_pos, txt):
+                canvas_obj.drawString(2*cm, y_pos, "• " + txt)
+                return y_pos - 0.8*cm
+
+            count = 0
             for _, row in base.iterrows():
                 code = row.get("code_iris") or "NA"
                 pdf_path = OUT / f"fiche_{code}.pdf"
                 c = canvas.Canvas(str(pdf_path), pagesize=A4)
                 width, height = A4
+
+                # Logo optionnel
                 if logo.exists():
                     try:
-                        c.drawImage(ImageReader(str(logo)), width-6*cm, height-3*cm, 4.5*cm, 1.5*cm, preserveAspectRatio=True, mask='auto')
-                    except Exception: pass
-                c.setFont("Helvetica-Bold", 18); c.drawString(2*cm, height-2.5*cm, f"Fiche IRIS – {code}")
-                c.setFont("Helvetica", 11); c.drawString(2*cm, height-3.5*cm, "Commune : Chambray-lès-Tours (37050)")
-                y = height-5*cm
-                def line(t):
-                    nonlocal y
-                    c.drawString(2*cm, y, "• " + t); y -= 0.8*cm
-                line(f"Population (RP): {row.get('pop','—')} | Âge médian: {row.get('age_median','—')}")
-                line(f"Revenu médian: {row.get('revenu_median','—')} € | Locataires: {row.get('locataires','—')}%")
-                line(f"Participation 2020: {row.get('participation_2020','—')}% | Abstention: {row.get('abstention_2020','—')}%")
-                line(f"Part -18 (proxy 18–24): {row.get('moins18','—')}% | SPT: {row.get('SPT','—')}")
+                        c.drawImage(
+                            ImageReader(str(logo)),
+                            width - 6*cm, height - 3*cm,
+                            4.5*cm, 1.5*cm,
+                            preserveAspectRatio=True, mask='auto'
+                        )
+                    except Exception:
+                        pass
+
+                # En-tête
+                c.setFont("Helvetica-Bold", 18)
+                c.drawString(2*cm, height - 2.5*cm, f"Fiche IRIS – {code}")
+                c.setFont("Helvetica", 11)
+                c.drawString(2*cm, height - 3.5*cm, "Commune : Chambray-lès-Tours (37050)")
+
+                # Corps
+                y = height - 5*cm
+                y = line(c, y, f"Population (RP): {row.get('pop','—')} | Âge médian: {row.get('age_median','—')}")
+                y = line(c, y, f"Revenu médian: {row.get('revenu_median','—')} € | Locataires: {row.get('locataires','—')}%")
+                y = line(c, y, f"Participation 2020: {row.get('participation_2020','—')}% | Abstention: {row.get('abstention_2020','—')}%")
+                y = line(c, y, f"Part -18 (proxy 18–24): {row.get('moins18','—')}% | SPT: {row.get('SPT','—')}")
+
+                # Bloc messages
                 y -= 0.4*cm
-                c.setFont("Helvetica-Bold", 12); c.drawString(2*cm, y, "Messages suggérés :"); y -= 0.8*cm; c.setFont("Helvetica", 11)
-                for m in ["Mobilités du quotidien (fréquences, sécurité piétons).",
-                          "Pouvoir d’achat local (commerces, circuits courts).",
-                          "Apaisement circulation résidentielle."]:
-                    c.drawString(2*cm, y, m); y -= 0.7*cm
+                c.setFont("Helvetica-Bold", 12)
+                c.drawString(2*cm, y, "Messages suggérés :")
+                y -= 0.8*cm
+                c.setFont("Helvetica", 11)
+                for m in [
+                    "Mobilités du quotidien (fréquences, sécurité piétons).",
+                    "Pouvoir d’achat local (commerces, circuits courts).",
+                    "Apaisement circulation résidentielle."
+                ]:
+                    c.drawString(2*cm, y, m)
+                    y -= 0.7*cm
+
+                # Source
                 c.setFont("Helvetica-Oblique", 9)
                 c.drawString(2*cm, 1.8*cm, "Sources: INSEE, Ministère de l’Intérieur, IGN, Data.gouv — préciser millésimes")
-                c.showPage(); c.save()
-            st.success(f"Fiches générées : {OUT}")
+
+                # Finalisation PDF
+                c.showPage()
+                c.save()
+                count += 1
+
+            st.success(f"{count} fiche(s) générée(s) dans {OUT}")
+
         except Exception as e:
             st.error(f"PDF: {e}")
-
-st.divider()
-st.subheader("Carte SPT par IRIS")
-
-geo = None
-for name in ["iris_37050.geojson","iris_37050_demo.geojson"]:
-    p = DATA / name
-    if p.exists(): geo = p; break
-
-if geo is None:
-    st.info("Ajoutez un GeoJSON (iris_37050.geojson) dans data/ pour afficher la carte.")
-else:
-    try:
-        import json, folium
-        from streamlit_folium import st_folium
-        gj = json.loads(geo.read_text(encoding="utf-8"))
-        spt = {str(r["code_iris"]): float(r["SPT"]) for _, r in base.fillna(0)[["code_iris","SPT"]].dropna().iterrows() if r["code_iris"]}
-        def guess_center(gj):
-            try:
-                feat = gj["features"][0]["geometry"]
-                if feat["type"] == "Point": return feat["coordinates"][1], feat["coordinates"][0]
-            except Exception: pass
-            return 47.33, 0.74
-        lat, lon = guess_center(gj)
-        m = folium.Map(location=[lat, lon], zoom_start=12, tiles="cartodbpositron")
-        def style_fn(f):
-            cid = str(f["properties"].get("code_iris") or f["properties"].get("CODE_IRIS") or "")
-            val = spt.get(cid, 0.0); vmax = max(spt.values()) if spt else 1.0
-            ratio = (val / vmax) if vmax else 0
-            import colorsys
-            hue = max(0.0, 0.33 * (1 - ratio))
-            r,g,b = colorsys.hsv_to_rgb(hue, 0.8, 0.9)
-            return {"fillColor": f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}", "color": "#333", "weight": 1, "fillOpacity": 0.6}
-        folium.GeoJson(gj, style_function=style_fn, tooltip=folium.GeoJsonTooltip(fields=[], aliases=[])).add_to(m)
-        st_folium(m, width=900, height=500)
-    except Exception as e:
-        st.warning(f"Carte indisponible: {e}")
-
-st.caption("Données: INSEE, Ministère de l’Intérieur, IGN, Data.gouv – Agrégées au niveau IRIS/BV.")
