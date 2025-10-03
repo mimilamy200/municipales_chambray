@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from pathlib import Path
@@ -100,6 +99,7 @@ with colA:
         path = OUT / "shortlist_iris.csv"
         base.sort_values("SPT", ascending=False)[["code_iris","SPT"]].head(10).to_csv(path, index=False)
         st.success(f"Exporté : {path}")
+
 with colB:
     if st.button("Générer toutes les fiches (PDF)"):
         try:
@@ -108,7 +108,7 @@ with colB:
             from reportlab.lib.units import cm
             from reportlab.lib.utils import ImageReader
 
-            # Petit helper qui dessine une ligne et renvoie le nouveau y
+            # Helper: dessine une ligne et renvoie le nouveau y
             def line(canvas_obj, y_pos, txt):
                 canvas_obj.drawString(2*cm, y_pos, "• " + txt)
                 return y_pos - 0.8*cm
@@ -172,3 +172,20 @@ with colB:
 
         except Exception as e:
             st.error(f"PDF: {e}")
+
+st.divider()
+st.subheader("Carte SPT par IRIS")
+
+geo = None
+for name in ["iris_37050.geojson","iris_37050_demo.geojson"]:
+    p = DATA / name
+    if p.exists(): geo = p; break
+
+if geo is None:
+    st.info("Ajoutez un GeoJSON (iris_37050.geojson) dans data/ pour afficher la carte.")
+else:
+    try:
+        import json, folium
+        from streamlit_folium import st_folium
+        gj = json.loads(geo.read_text(encoding="utf-8"))
+        spt = {str(r["code_iris"]): float(r["SPT]()_]()
