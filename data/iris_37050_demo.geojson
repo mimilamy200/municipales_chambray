@@ -1,0 +1,51 @@
+{
+  "type": "FeatureCollection",
+  "name": "iris_37050_demo",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "code_iris": "370500101",
+        "nom_iris": "Chambray Centre",
+        "code_insee": "37050"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.74,
+          47.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "code_iris": "370500202",
+        "nom_iris": "La Vrillonnerie",
+        "code_insee": "37050"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.75,
+          47.32
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "code_iris": "370500303",
+        "nom_iris": "Beaune-Semblançay",
+        "code_insee": "37050"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.76,
+          47.31
+        ]
+      }
+    }
+  ]
+}
