@@ -112,22 +112,30 @@ w2 = st.slider("Poids 18–24 (proxy via -18)", 0.0, 3.0, 1.0, 0.1)
 w3 = st.slider("Poids locataires", 0.0, 3.0, 1.0, 0.1)
 w4 = st.slider("Poids (100 - participation 2020)", 0.0, 3.0, 1.0, 0.1)
 
+# S'assure que les colonnes existent
 for c in ["abstention_2020", "moins18", "locataires", "participation_2020"]:
     if c not in base.columns:
-        base[c] = 0
+        base[c] = pd.NA
 
-base["SPT"] = (
-    w1 * base["abstention_2020"].fillna(0)
-    + w2 * base["moins18"].fillna(0)
-    + w3 * base["locataires"].fillna(0)
-    + w4 * (100 - base["participation_2020"].fillna(50))
-).round(2)
+# Coercition en numérique (évite dtype "object")
+for c in ["abstention_2020", "moins18", "locataires", "participation_2020", "pop", "age_median", "revenu_median"]:
+    if c in base.columns:
+        base[c] = pd.to_numeric(base[c], errors="coerce")
+
+# Valeurs par défaut si NaN
+a = base["abstention_2020"].fillna(0.0)
+u18 = base["moins18"].fillna(0.0)
+loc = base["locataires"].fillna(0.0)
+part = base["participation_2020"].fillna(50.0)
+
+# Calcul SPT (force en float avant round)
+base["SPT"] = (w1 * a + w2 * u18 + w3 * loc + w4 * (100.0 - part)).astype(float).round(2)
 
 st.subheader("Top 10 IRIS (SPT)")
 st.dataframe(
     base.fillna("")[["code_iris", "SPT", "abstention_2020", "moins18", "locataires", "participation_2020"]]
-    .sort_values("SPT", ascending=False)
-    .head(10)
+        .sort_values("SPT", ascending=False)
+        .head(10)
 )
 
 # --- Exports
